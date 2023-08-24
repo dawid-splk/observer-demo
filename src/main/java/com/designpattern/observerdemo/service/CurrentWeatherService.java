@@ -1,5 +1,13 @@
 package com.designpattern.observerdemo.service;
 
+import com.designpattern.observerdemo.logger.LoggingSystem;
+import com.designpattern.observerdemo.model.Location;
+import com.designpattern.observerdemo.model.Weather;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -8,23 +16,39 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 @Service
 public class CurrentWeatherService {
+
+    public Set<Location> locations = new HashSet<>();       //public access for the main class to log measures
+    private final LoggingSystem loggingSystem = new LoggingSystem();
+
     public ResponseEntity<String> getWeather(String country, String city) {
+
+        String response = makeRequest(country, city);
+
+        if (response == null) {
+            return ResponseEntity.internalServerError().build();
+        } else if (response.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        } else {
+            return ResponseEntity.ok(response);
+        }
+
+    }
+
+    private String makeRequest(String country, String city) {
 
         try {
             URL url = new URL("https://api.openweathermap.org/data/2.5/weather?q=" + city + "," + getCountryCode(country) + "&appid=" + getApiKey());
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
 
+            StringBuilder response = new StringBuilder();
 
             if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 Scanner scanner = new Scanner(connection.getInputStream());
-                StringBuilder response = new StringBuilder();
 
                 while (scanner.hasNextLine()) {
                     response.append(scanner.nextLine());
@@ -33,16 +57,52 @@ public class CurrentWeatherService {
                 scanner.close();
                 connection.disconnect();
 
-                System.out.println(response);
-                return ResponseEntity.ok(response.toString());
-            } else {
-                connection.disconnect();
-                return ResponseEntity.badRequest().build();
             }
+            return response.toString();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return ResponseEntity.internalServerError().build();
+        return null;
+    }
+
+    public ResponseEntity<String> subscribe(String country, String city) {
+        Location location = new Location(country, city);
+        location.registerObserver(loggingSystem);
+        locations.add(location);     //set and equals() and hashcode() methods should prevent duplicates
+        return ResponseEntity.ok("Subscribed to " + city + ", " + country);
+    }
+
+    public void updateMeasurements() throws JsonProcessingException {
+        for (Location location : locations) {
+            location.setCurrentForecast(getLocationWeather(location));
+            location.notifyObservers();
+        }
+    }
+
+    private String getLocationWeather(Location location) throws JsonProcessingException {
+        var responseBody = "{\"coord\":{\"lon\":18.35,\"lat\":50.6476},\"weather\":[{\"id\":800,\"main\":\"Clear\",\"description\":\"clear sky\",\"icon\":\"01d\"}],\"base\":\"stations\",\"main\":{\"temp\":277.28,\"feels_like\":297.08,\"temp_min\":294.71,\"temp_max\":297.35,\"pressure\":1019,\"humidity\":49,\"sea_level\":1019,\"grnd_level\":996},\"visibility\":10000,\"wind\":{\"speed\":2,\"deg\":279,\"gust\":2.36},\"clouds\":{\"all\":6},\"dt\":1692865265,\"sys\":{\"type\":2,\"id\":2020533,\"country\":\"PL\",\"sunrise\":1692848865,\"sunset\":1692899451},\"timezone\":7200,\"id\":3084415,\"name\":\"Staniszcze Wielkie\",\"cod\":200}";
+//        var responseBody = makeRequest(location.getCountry(), location.getCity());
+
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.readTree(responseBody);
+
+        return "Measures for " + location.getCity() + ", " + location.getCountry() + ": " + extractMeasurements(jsonNode);
+    }
+
+    private String extractMeasurements(JsonNode jsonNode) throws JsonProcessingException {
+
+        Weather weather = Weather.builder()
+                .description(jsonNode.get("weather").get(0).get("description").asText())
+                .temperature(jsonNode.get("main").get("temp").asDouble() - 273.15)
+                .pressure(jsonNode.get("main").get("pressure").asInt())
+                .humidity(jsonNode.get("main").get("humidity").asInt())
+                .visibility(jsonNode.get("visibility").asInt())
+                .windSpeed(jsonNode.get("wind").get("speed").asInt())
+                .windDirection(jsonNode.get("wind").get("deg").asText())
+                .build();
+
+        return weather.toString();
     }
 
     private String getApiKey() {
@@ -77,4 +137,18 @@ public class CurrentWeatherService {
                 "brazil", "br");
         return countryCodess.get(countryName.toLowerCase());
     }
+
+//    public static void main(String[] args) throws JsonProcessingException {
+//        CurrentWeatherService service = new CurrentWeatherService();
+////
+////        var responseBody = "{\"coord\":{\"lon\":18.35,\"lat\":50.6476},\"weather\":[{\"id\":800,\"main\":\"Clear\",\"description\":\"clear sky\",\"icon\":\"01d\"}],\"base\":\"stations\",\"main\":{\"temp\":277.28,\"feels_like\":297.08,\"temp_min\":294.71,\"temp_max\":297.35,\"pressure\":1019,\"humidity\":49,\"sea_level\":1019,\"grnd_level\":996},\"visibility\":10000,\"wind\":{\"speed\":2,\"deg\":279,\"gust\":2.36},\"clouds\":{\"all\":6},\"dt\":1692865265,\"sys\":{\"type\":2,\"id\":2020533,\"country\":\"PL\",\"sunrise\":1692848865,\"sunset\":1692899451},\"timezone\":7200,\"id\":3084415,\"name\":\"Staniszcze Wielkie\",\"cod\":200}";
+////        ObjectMapper mapper = new ObjectMapper();
+////        JsonNode jsonNode = mapper.readTree(responseBody);
+////
+////        System.out.println("Measures for Staniszcze Wielkie: " + service.extractMeasurements(jsonNode));
+//
+//        StringBuilder bd = new StringBuilder();
+//        System.out.println(bd == null);
+//        System.out.println(bd.toString().isEmpty());
+//    }
 }

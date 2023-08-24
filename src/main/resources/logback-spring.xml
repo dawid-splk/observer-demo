@@ -1,0 +1,28 @@
+<configuration>
+
+    <!-- Appender for weather notifications -->
+    <appender name="WeatherAppender" class="ch.qos.logback.core.FileAppender">
+        <file>weatherLog.log</file>
+        <encoder>
+            <pattern>%d{ISO8601} %level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Appender for console output -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{ISO8601} %level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Loggers -->
+    <logger name="com.designpattern.observerdemo.logger.LoggingSystem" level="INFO">
+        <appender-ref ref="WeatherAppender" />
+    </logger>
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+</configuration>
