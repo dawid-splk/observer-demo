@@ -18,7 +18,7 @@ target/
 *.iws
 *.iml
 *.ipr
-*.log
+
 
 ### NetBeans ###
 /nbproject/private/
@@ -34,4 +34,3 @@ build/
 .vscode/
 
 credentials
-*codes

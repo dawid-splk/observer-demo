@@ -2,7 +2,7 @@
 
     <!-- Appender for weather notifications -->
     <appender name="WeatherAppender" class="ch.qos.logback.core.FileAppender">
-        <file>weatherLog.log</file>
+        <file>weather_history.log</file>
         <encoder>
             <pattern>%d{ISO8601} %level %logger{36} - %msg%n</pattern>
         </encoder>

@@ -19,28 +19,50 @@ import java.util.*;
 
 @Service
 public class CurrentWeatherService {
+    public Set<Location> locations = new HashSet<>();
 
-    public Set<Location> locations = new HashSet<>();       //public access for the main class to log measures
     private final LoggingSystem loggingSystem = new LoggingSystem();
+    private HashMap<String, String> countryCodes;
 
-    public ResponseEntity<String> getWeather(String country, String city) {
+    private final String COUNTRY_CODES_FILEPATH = "iso_country_codes";
+    private final String CREDENTIALS_FILEPATH = "credentials";
 
-        String response = makeWeatherApiRequest(country, city);
+
+    public ResponseEntity<String> getWeather(String country, String city) throws JsonProcessingException {
+
+        String response = getLocationWeather(country, city);
 
         if (response == null) {
             return ResponseEntity.internalServerError().build();
         } else if (response.isEmpty()) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.notFound().build();
         } else {
             return ResponseEntity.ok(response);
         }
+    }
 
+    public ResponseEntity<String> subscribe(String country, String city) {
+        Location location = new Location(country, city);
+        location.registerObserver(loggingSystem);
+        locations.add(location);     //set and equals() and hashcode() methods should prevent duplicates
+        return ResponseEntity.ok("Subscribed to " + city + ", " + country);
+    }
+
+    public ResponseEntity<String> unsubscribe(String country, String city) {
+        locations.removeIf(location -> location.getCountry().equals(country) && location.getCity().equals(city));
+        return ResponseEntity.ok("Unsubscribed to " + city + ", " + country);
+    }
+
+    public ResponseEntity<String> unsubscribeToAll() {
+        locations.clear();
+        return ResponseEntity.ok("Unsubscribed to all locations");
     }
 
     private String makeWeatherApiRequest(String country, String city) {
 
         try {
-            URL url = new URL("https://api.openweathermap.org/data/2.5/weather?q=" + city + "," + getCountryCode(country) + "&appid=" + getApiKey());
+            String urlString = "https://api.openweathermap.org/data/2.5/weather?q=" + city + "," + getCountryCode(country) + "&appid=" + getApiKey();
+            URL url = new URL(urlString);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
 
@@ -65,42 +87,34 @@ public class CurrentWeatherService {
         return null;
     }
 
-    public ResponseEntity<String> subscribe(String country, String city) {
-        Location location = new Location(country, city);
-        location.registerObserver(loggingSystem);
-        locations.add(location);     //set and equals() and hashcode() methods should prevent duplicates
-        return ResponseEntity.ok("Subscribed to " + city + ", " + country);
-    }
-
-    public ResponseEntity<String> unsubscribe(String country, String city) {
-        locations.removeIf(location -> location.getCountry().equals(country) && location.getCity().equals(city));
-        return ResponseEntity.ok("Unsubscribed to " + city + ", " + country);
-    }
-
-    public ResponseEntity<String> unsubscribeToAll() {
-        locations.clear();
-        return ResponseEntity.ok("Unsubscribed to all locations");
-    }
-
     @Scheduled(fixedDelay = 20000)
     public void updateReadings() throws JsonProcessingException {
         for (Location location : locations) {
-            location.setCurrentForecast(getLocationWeather(location));
+            location.setCurrentForecast(getLocationWeather(location.getCountry(), location.getCity()));
+            if (location.getCurrentForecast() == null || location.getCurrentForecast().isEmpty()) {
+                locations.remove(location);
+            }
             location.notifyObservers();
         }
     }
 
-    private String getLocationWeather(Location location) throws JsonProcessingException {
+    private String getLocationWeather(String country, String city) throws JsonProcessingException {
 //        var responseBody = "{\"coord\":{\"lon\":18.35,\"lat\":50.6476},\"weather\":[{\"id\":800,\"main\":\"Clear\",\"description\":\"clear sky\",\"icon\":\"01d\"}],\"base\":\"stations\",\"main\":{\"temp\":277.28,\"feels_like\":297.08,\"temp_min\":294.71,\"temp_max\":297.35,\"pressure\":1019,\"humidity\":49,\"sea_level\":1019,\"grnd_level\":996},\"visibility\":10000,\"wind\":{\"speed\":2,\"deg\":279,\"gust\":2.36},\"clouds\":{\"all\":6},\"dt\":1692865265,\"sys\":{\"type\":2,\"id\":2020533,\"country\":\"PL\",\"sunrise\":1692848865,\"sunset\":1692899451},\"timezone\":7200,\"id\":3084415,\"name\":\"Staniszcze Wielkie\",\"cod\":200}";
-        var responseBody = makeWeatherApiRequest(location.getCountry(), location.getCity());
+        var responseBody = makeWeatherApiRequest(country, city);
+
+        if (responseBody == null) {
+            return null;
+        } else if (responseBody.isEmpty()) {
+            return "";
+        }
 
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode = mapper.readTree(responseBody);
 
-        return "Measures for " + location.getCity() + ", " + location.getCountry() + ": " + extractMeasurements(jsonNode);
+        return "Readings for " + city + ", " + country + ": " + extractReadings(jsonNode);
     }
 
-    private String extractMeasurements(JsonNode jsonNode) throws JsonProcessingException {
+    private String extractReadings(JsonNode jsonNode) throws JsonProcessingException {
 
         Weather weather = Weather.builder()
                 .description(jsonNode.get("weather").get(0).get("description").asText())
@@ -116,7 +130,7 @@ public class CurrentWeatherService {
     }
 
     private String getApiKey() {
-        try (BufferedReader reader = new BufferedReader(new FileReader("credentials"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(CREDENTIALS_FILEPATH))) {
             String line = reader.readLine();
 
             if (line != null) {
@@ -131,26 +145,21 @@ public class CurrentWeatherService {
     }
 
     private String getCountryCode(String countryName) {
-        HashMap<String, String> countryCodes = new HashMap<>();
-        countryCodes.put("Poland", "pl");
-        countryCodes.put("Germany", "de");
-        Map<String, String> countryCodess = Map.of(
-                "italy", "it",
-                "poland", "pl",
-                "united states", "us",
-                "germany", "de",
-                "france", "fr",
-                "spain", "es",
-                "japan", "jp",
-                "australia", "au",
-                "canada", "ca",
-                "brazil", "br");
-        return countryCodess.get(countryName.toLowerCase());
-    }
 
-//    public static void main(String[] args) {
-//        Set<String> secik = new HashSet<>();
-//        secik = Set.of("warsaw", "wroclaw", "krakow");
-//        System.out.println(secik);
-//    }
+        if(countryCodes == null) {
+            countryCodes = new HashMap<>();
+
+            try (BufferedReader reader = new BufferedReader(new FileReader(COUNTRY_CODES_FILEPATH))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] split = line.split("\t");
+                    countryCodes.put(split[0].toLowerCase(), split[1]);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return countryCodes.get(countryName.toLowerCase());
+    }
 }

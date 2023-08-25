@@ -1,0 +1,7 @@
+2023-08-25 09:50:52,527 INFO c.d.o.logger.LoggingSystem - Measures for warszawa, poland: Overall='light rain', temperature=21,5°C, pressure=1011hPa, humidity=72%, windSpeed=3km/h, windDirection='140, visibility=10000m'
+2023-08-25 09:50:52,560 INFO c.d.o.logger.LoggingSystem - Measures for bari, itali: Overall='clear sky', temperature=29,5°C, pressure=1015hPa, humidity=53%, windSpeed=2km/h, windDirection='13, visibility=10000m'
+2023-08-25 09:51:12,720 INFO c.d.o.logger.LoggingSystem - Measures for bari, itali: Overall='clear sky', temperature=29,5°C, pressure=1015hPa, humidity=53%, windSpeed=2km/h, windDirection='13, visibility=10000m'
+2023-08-25 09:53:41,583 INFO c.d.o.logger.LoggingSystem - Measures for Staniszcze Wielkie, poland: Overall='overcast clouds', temperature=23,6°C, pressure=1011hPa, humidity=65%, windSpeed=4km/h, windDirection='191, visibility=10000m'
+2023-08-25 09:54:01,716 INFO c.d.o.logger.LoggingSystem - Measures for Staniszcze Wielkie, poland: Overall='overcast clouds', temperature=23,6°C, pressure=1011hPa, humidity=65%, windSpeed=4km/h, windDirection='191, visibility=10000m'
+2023-08-25 10:26:14,992 INFO c.d.o.logger.LoggingSystem - Measures for warszawa, poland: Overall='light rain', temperature=21,6°C, pressure=1010hPa, humidity=71%, windSpeed=4km/h, windDirection='130, visibility=10000m'
+

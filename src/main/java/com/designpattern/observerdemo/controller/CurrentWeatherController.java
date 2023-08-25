@@ -2,6 +2,7 @@ package com.designpattern.observerdemo.controller;
 
 
 import com.designpattern.observerdemo.service.CurrentWeatherService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,13 +16,8 @@ public class CurrentWeatherController {
 
     CurrentWeatherService service;
 
-//    @GetMapping("/weather")
-//    public String getWeatherPage() {
-//        return "index.html";
-//    }
-
     @GetMapping("/weather/{country}/{city}")
-    public ResponseEntity<String> getWeatherForCity(@PathVariable("country") String country, @PathVariable("city") String city){
+    public ResponseEntity<String> getWeatherForCity(@PathVariable("country") String country, @PathVariable("city") String city) throws JsonProcessingException {
         return service.getWeather(country, city);
     }
 
