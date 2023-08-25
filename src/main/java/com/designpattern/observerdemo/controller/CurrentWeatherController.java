@@ -4,14 +4,9 @@ package com.designpattern.observerdemo.controller;
 import com.designpattern.observerdemo.service.CurrentWeatherService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 
@@ -31,7 +26,17 @@ public class CurrentWeatherController {
     }
 
     @GetMapping("/weather/subscribe/{country}/{city}")
-    public ResponseEntity<String> getSubscribeToLocation(@PathVariable("country") String country, @PathVariable("city") String city){
+    public ResponseEntity<String> subscribeToLocation(@PathVariable("country") String country, @PathVariable("city") String city){
         return service.subscribe(country, city);
+    }
+
+    @GetMapping("/weather/unsubscribe/{country}/{city}")
+    public ResponseEntity<String> unsubscribeToLocation(@PathVariable("country") String country, @PathVariable("city") String city){
+        return service.unsubscribe(country, city);
+    }
+
+    @GetMapping("/weather/unsubscribe/all")
+    public ResponseEntity<String> unsubscribeToAll(){
+        return service.unsubscribeToAll();
     }
 }
